@@ -44,3 +44,12 @@ sudo journalctl -u downtime-monitor.service
 ```
 
 And now the service should run at startup. It's probably a good idea to verify that at your next reboot.
+
+### Analysis
+
+A simple plotting script is included to help with quick log perusal. The following will create a single figure showing the error codes for each day logging was active."
+
+```bash
+# note that this assumes the logs are in the default directory. See 'plot.py -h' for more information.
+python3 plot.py
+```
