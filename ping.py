@@ -35,9 +35,11 @@ def main(args):
     while not exit.is_set():
         # if we have local internet, log sitcore's code
         code = -1
+        message = ""
         local_internet_ok = False
         try:
             local_internet_ok = urllib.request.urlopen(args.baseline, timeout=1).getcode() == 200
+            message="good"
         except Exception as e:
             # No internet at all, presumable. pass
             print("Couldn't reach baseline URL {}: {} \nAssuming we don't have internet".format(
@@ -48,15 +50,18 @@ def main(args):
             except http.client.RemoteDisconnected:
                 # error #1, remote Disconnected
                 code = 590
-            except socket.timeout:
+                message = "disconnected"
+            except (socket.timeout, urllib.error.URLError):
                 # error #2, timeout
                 code = 591
+                message = "timeout"
             except Exception as e:
                 # miscellaneous errors get 599
                 code = 599
+                message = "misc"
                 print("Using error code {} for miscellaneous error: \n{}: {}".format(code, type(e), e))
             with open(os.path.join(args.log_directory, "log.log"), "a") as f:
-                f.write("\n{}, {}".format(time.time(), code))
+                f.write("\n{}, {}, {}".format(time.time(), code, message))
 
         # sleep until next poll, or exit requested
         exit.wait(args.interval)
