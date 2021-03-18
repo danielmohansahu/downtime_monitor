@@ -44,7 +44,7 @@ def main(args):
         message = ""
         local_internet_ok = False
         try:
-            local_internet_ok = urllib.request.urlopen(args.baseline, timeout=1).getcode() == 200
+            local_internet_ok = urllib.request.urlopen(args.baseline, timeout=min(2,args.interval)).getcode() == 200
         except Exception as e:
             # No internet at all, presumable. pass
             print("Couldn't reach baseline URL {}: {} \nAssuming we don't have internet".format(
