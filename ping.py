@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument("-i", "--interval", type=float, default=5.0)
     return parser.parse_args()
 
-def main(args):
+def main(args, logger):
     """ Continually ping until an exit signal is sent.
  
     If we have local internet, log website's return code (or common errors).
@@ -52,7 +52,6 @@ def main(args):
         else:
             # skip if we couldn't ping our baseline
             if local_internet_ok:
-
                 # actually poll the target site
                 try:
                     code = urllib.request.urlopen(args.url, timeout=min(1,args.interval)).getcode()
@@ -70,8 +69,7 @@ def main(args):
                     code = 599
                     message = "misc"
                     print("Using error code {} for miscellaneous error: \n{}: {}".format(code, type(e), e))
-                with open(os.path.join(args.log_directory, "log.log"), "a") as f:
-                    f.write("\n{}, {}, {}".format(st, code, message))
+                logger.info("{}, {}, {}".format(st, code, message))
 
         # sleep until next poll, or exit requested
         sleep_time = max(0, args.interval - (time.time() - st))
@@ -82,11 +80,21 @@ if __name__ == "__main__":
     print("{}: Starting to ping {}, logging to {}".format(
         time.time(), args.url, args.log_directory))
 
+    # create logging handler
+    logger = logging.getLogger("Downtime Logger")
+    logger.setLevel(logging.INFO)
+    handler = TimedRotatingFileHandler(
+        os.path.join(args.log_directory, "log.log"),
+        when="midnight",
+        interval=1,
+        backupCount=60)
+    logger.addHandler(handler)
+
     # set exit signals
     for sig in ('TERM', 'HUP', 'INT'):
         signal.signal(getattr(signal, 'SIG'+sig), lambda s,f: exit.set());
 
     # run until shut down
-    main(args)
+    main(args, logger)
 
 
