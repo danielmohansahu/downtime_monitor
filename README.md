@@ -21,7 +21,7 @@ First, create a new file `downtime-monitor.service` in `/etc/systemd/system/` an
 Description=Ping website and measure resulting error codes.
 
 [Service]
-ExecStart={PATH TO CLONED REPOSITORY)/ping.py start
+ExecStart={PATH TO CLONED REPOSITORY)/ping.py https://{SPOTTY WEBSITE}.com
 
 [Install]
 WantedBy=multi-user.target
@@ -42,3 +42,5 @@ sudo systemctl status downtime-monitor.service
 # more detailed status
 sudo journalctl -u downtime-monitor.service
 ```
+
+And now the service should run at startup. It's probably a good idea to verify that at your next reboot.
