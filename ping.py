@@ -9,6 +9,9 @@ import signal
 import urllib.request
 from threading import Event
 
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 # import packages for Exceptions
 import http
 import socket
@@ -21,7 +24,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='Periodically log the site code of a given website.')
     parser.add_argument("url", type=str, help="the URL of the website to monitor.")
-    parser.add_argument("-b", "--baseline", type=str, default="https://google.com",
+    parser.add_argument("-b", "--baseline", type=str, default="http://google.com",
         help="a 'reliable' website used to differentiate local internet problems.")
     parser.add_argument("-l", "--log-directory", type=str,
         default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs"),
@@ -31,40 +34,48 @@ def parse_args():
 
 def main(args):
     """ Continually ping until an exit signal is sent.
+ 
+    If we have local internet, log website's return code (or common errors).
     """
     while not exit.is_set():
-        # if we have local internet, log sitcore's code
+        # reset loop variables
+        st = time.time()
         code = -1
         message = ""
         local_internet_ok = False
         try:
             local_internet_ok = urllib.request.urlopen(args.baseline, timeout=1).getcode() == 200
-            message="good"
         except Exception as e:
             # No internet at all, presumable. pass
             print("Couldn't reach baseline URL {}: {} \nAssuming we don't have internet".format(
                 args.baseline, e))
         else:
-            try:
-                code = urllib.request.urlopen(args.url, timeout=min(1,args.interval)).getcode()
-            except http.client.RemoteDisconnected:
-                # error #1, remote Disconnected
-                code = 590
-                message = "disconnected"
-            except (socket.timeout, urllib.error.URLError):
-                # error #2, timeout
-                code = 591
-                message = "timeout"
-            except Exception as e:
-                # miscellaneous errors get 599
-                code = 599
-                message = "misc"
-                print("Using error code {} for miscellaneous error: \n{}: {}".format(code, type(e), e))
-            with open(os.path.join(args.log_directory, "log.log"), "a") as f:
-                f.write("\n{}, {}, {}".format(time.time(), code, message))
+            # skip if we couldn't ping our baseline
+            if local_internet_ok:
+
+                # actually poll the target site
+                try:
+                    code = urllib.request.urlopen(args.url, timeout=min(1,args.interval)).getcode()
+                    message = "good"
+                except http.client.RemoteDisconnected:
+                    # error #1, remote Disconnected
+                    code = 590
+                    message = "disconnected"
+                except (socket.timeout, urllib.error.URLError):
+                    # error #2, timeout
+                    code = 591
+                    message = "timeout"
+                except Exception as e:
+                    # miscellaneous errors get 599
+                    code = 599
+                    message = "misc"
+                    print("Using error code {} for miscellaneous error: \n{}: {}".format(code, type(e), e))
+                with open(os.path.join(args.log_directory, "log.log"), "a") as f:
+                    f.write("\n{}, {}, {}".format(st, code, message))
 
         # sleep until next poll, or exit requested
-        exit.wait(args.interval)
+        sleep_time = max(0, args.interval - (time.time() - st))
+        exit.wait(sleep_time)
 
 if __name__ == "__main__":
     args = parse_args()
