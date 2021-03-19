@@ -8,6 +8,7 @@ import csv
 import glob
 import argparse
 from datetime import datetime
+from matplotlib import dates
 from matplotlib import pyplot as plt
 
 def parse_args():
@@ -47,19 +48,32 @@ def plot_single_log(data):
     # convert time to dateime
     x = [datetime.fromtimestamp(t) for t in time]
 
+    # convert codes into boolean "up or down"
+    y = [1 if c == 200 else 0 for c in code]
+
     # plot time vs. code
     day = datetime.fromtimestamp(time[0]).strftime("%Y-%m-%d")
-    plt.figure(day)
+    fig = plt.figure(day)
     plt.title("Error Codes for {}".format(day))
-    plt.plot(x, code, "o")
+    plt.plot(x, y, "o", markersize=2)
     plt.grid(True)
+
+    # format x data labels
+    fig.axes[-1].xaxis.set_major_formatter(dates.DateFormatter('%H:%M'))
     plt.gcf().autofmt_xdate()
+    plt.xlabel("time")
+
+    # format y data labels
+    labels = ["no", "yes"]
+    fig.axes[-1].set_yticks(range(len(labels)))
+    fig.axes[-1].set_yticklabels(labels)
+    plt.ylabel("Up?")
 
 if __name__ == "__main__":
     args = parse_args()
 
     # get all log files in the logging directory
-    files = glob.glob(os.path.join(args.log_directory, "*.log"))
+    files = glob.glob(os.path.join(args.log_directory, "*.log*"))
     print("Found {} log files in {}".format(len(files), args.log_directory))
 
     # create and plot a new figure for each file
